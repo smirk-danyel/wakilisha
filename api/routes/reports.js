@@ -46,20 +46,108 @@ async function calculateSHA256(filePath) {
   return hash.digest("hex");
 }
 
-// Validate uploaded file signatures.
+// Confirm that an MP4-based container contains audio only.
+async function isAudioOnlyMp4(filePath) {
+  const { createFile } = await import("mp4box");
+  const fileBuffer = await fs.promises.readFile(filePath);
+
+  const arrayBuffer = fileBuffer.buffer.slice(
+    fileBuffer.byteOffset,
+    fileBuffer.byteOffset + fileBuffer.byteLength,
+  );
+
+  arrayBuffer.fileStart = 0;
+
+  const mp4File = createFile();
+
+  const info = await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("MP4 track inspection timed out."));
+    }, 10000);
+
+    mp4File.onReady = (metadata) => {
+      clearTimeout(timeout);
+      resolve(metadata);
+    };
+
+    mp4File.onError = (error) => {
+      clearTimeout(timeout);
+      reject(new Error(String(error)));
+    };
+
+    try {
+      mp4File.appendBuffer(arrayBuffer);
+      mp4File.flush();
+    } catch (error) {
+      clearTimeout(timeout);
+      reject(error);
+    }
+  });
+
+  const tracks = info.tracks || [];
+
+  const audioTracks = tracks.filter((track) => Boolean(track.audio));
+  const videoTracks = tracks.filter((track) => Boolean(track.video));
+  const unsupportedTracks = tracks.filter(
+    (track) => !track.audio && !track.video,
+  );
+
+  return (
+    audioTracks.length > 0 &&
+    videoTracks.length === 0 &&
+    unsupportedTracks.length === 0
+  );
+}
+
+// Validate uploaded file signatures and actual media tracks.
 async function validateFileSignatures(files) {
   const { fileTypeFromFile } = await import("file-type");
 
   for (const file of files) {
     const detected = await fileTypeFromFile(file.path);
 
-    if (!detected || !allowedSignatures[detected.mime]) {
+    if (!detected) {
       throw new Error(
         "One of the uploaded files has an unsupported file signature.",
       );
     }
 
     const expectedType = file.fieldname === "image" ? "image" : "audio";
+
+    if (detected.mime === "video/mp4" || detected.mime === "audio/mp4") {
+      if (expectedType !== "audio") {
+        throw new Error("Video files are not accepted as evidence.");
+      }
+
+      const audioOnly = await isAudioOnlyMp4(file.path);
+
+      if (!audioOnly) {
+        throw new Error(
+          "Only audio-only MP4/M4A files are accepted. Video files are not allowed.",
+        );
+      }
+
+      file.detectedMime = "audio/mp4";
+      file.evidenceType = "audio";
+
+      // Store verified AAC audio in its correct M4A format.
+      if (file.filename.endsWith(".mp3")) {
+        const newFilename = `${path.parse(file.filename).name}.m4a`;
+        const newPath = path.join(path.dirname(file.path), newFilename);
+
+        await fs.promises.rename(file.path, newPath);
+
+        file.filename = newFilename;
+        file.path = newPath;
+      }
+      continue;
+    }
+
+    if (!allowedSignatures[detected.mime]) {
+      throw new Error(
+        "One of the uploaded files has an unsupported file signature.",
+      );
+    }
 
     if (allowedSignatures[detected.mime] !== expectedType) {
       throw new Error("The uploaded file does not match its expected type.");

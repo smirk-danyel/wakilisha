@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import {
 
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
+
 import { StatusBar } from "expo-status-bar";
 import { Svg, Path, Circle, Line } from "react-native-svg";
 import { useFonts } from "expo-font";
@@ -275,10 +277,10 @@ function formatDuration(milliseconds) {
 }
 
 export default function HomeScreen({
-  onUseLocation,
-  onRecordAudio,
-  onTakePhoto,
-  onChooseImage,
+  onUseLocation = undefined,
+  onRecordAudio = undefined,
+  onTakePhoto = undefined,
+  onChooseImage = undefined,
   onSubmitReport,
 }) {
   const [fontsLoaded] = useFonts({
@@ -444,14 +446,45 @@ export default function HomeScreen({
       (item) => item.id === selectedType,
     );
 
+    if (!selectedEmergency) {
+      Alert.alert(
+        "Missing information",
+        "Please select an emergency category.",
+      );
+      return;
+    }
+
+    if (!/^0[17]\d{8}$/.test(phone.trim())) {
+      Alert.alert(
+        "Invalid phone number",
+        "Enter a valid Kenyan mobile number, e.g. 0712345678.",
+      );
+      return;
+    }
+
+    const hasLocation =
+      location.trim() ||
+      (gpsCoordinates?.latitude != null && gpsCoordinates?.longitude != null);
+
+    if (!hasLocation) {
+      Alert.alert("Missing location", "Please enter your location or use GPS.");
+      return;
+    }
+
+    if (!description.trim() && !recordedAudioUri) {
+      Alert.alert(
+        "Missing report details",
+        "Please describe the emergency or record a voice message.",
+      );
+      return;
+    }
+
     onSubmitReport({
-      emergencyType: selectedEmergency?.backendType,
+      emergencyType: selectedEmergency.backendType,
       location,
       description,
       imageUri: capturedImageUri,
       phone,
-
-      // GPS coordinates for the Wakilisha API
       latitude: gpsCoordinates?.latitude ?? null,
       longitude: gpsCoordinates?.longitude ?? null,
       audioUri: recordedAudioUri,
@@ -475,9 +508,7 @@ export default function HomeScreen({
 
         const uri = audioRecorder.uri;
 
-        if (!uri) {
-          throw new Error("The recording file could not be saved.");
-        }
+        if (!uri) throw new Error("The recording file could not be saved.");
 
         setRecordedAudioUri(uri);
         setRecordedAudioDuration(durationSeconds);
@@ -653,7 +684,11 @@ export default function HomeScreen({
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior="padding"
+      keyboardVerticalOffset={0}
+    >
       <StatusBar hidden />
 
       <ScrollView
@@ -661,6 +696,7 @@ export default function HomeScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* HEADER */}
         <View style={styles.header}>
@@ -929,7 +965,7 @@ export default function HomeScreen({
           </Pressable>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1051,7 +1087,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 128,
+    paddingBottom: 0,
   },
 
   // HEADER
@@ -1255,7 +1291,7 @@ const styles = StyleSheet.create({
   descriptionSection: {
     marginTop: 24,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 0,
   },
 
   descriptionRow: {
