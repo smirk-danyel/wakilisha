@@ -1,0 +1,89 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+@import "tailwindcss";
+
+/* Wakilisha design tokens */
+@theme {
+  --font-sans: "Poppins", sans-serif;
+
+  --color-brand-teal: #175349;
+  --color-brand-teal-hover: #113e37;
+  --color-brand-accent-green: #7ce08a;
+  --color-brand-light-bg: #e9edeb;
+
+  --color-status-red: #e5484d;
+  --color-status-amber: #f5a524;
+  --color-status-blue: #3b82f6;
+  --color-status-purple: #8b5cf6;
+  --color-status-emerald: #0d9488;
+  --color-status-green: #22c55e;
+  --color-status-orange: #f97316;
+
+  --shadow-soft-card: 0 8px 30px rgba(0, 0, 0, 0.04);
+  --shadow-drawer: -10px 0 40px rgba(0, 0, 0, 0.08);
+}
+
+/* Global styles */
+:root {
+  font-family: "Poppins", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  color: #1a1a1a;
+  background: #e9edeb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  font-family: "Poppins", sans-serif;
+  background: #e9edeb;
+  color: #1a1a1a;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
